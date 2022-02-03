@@ -125,6 +125,7 @@ static int std_code = C11;  /* Selected standard */
 static bool cflag = false;   /* Print comments and not code */
 static bool eflag = false;   /* Print empty comment instead of blank */
 static bool nflag = false;   /* Keep newlines in comments */
+static bool kflag = false;   /* Keep number of characters in comments (implies -n) */
 static bool wflag = false;   /* Warn about nested C-style comments */
 
 static int qchar = 0;   /* Replacement character for quotes */
@@ -144,14 +145,15 @@ static int l_nest = 0;  /* Last line with a nested comment warning */
 static int l_cend = 0;  /* Last line with a comment end warning */
 static bool l_comment = false;  /* Line contained a comment - print newline in -c mode */
 
-static const char optstr[] = "cefhnq:s:wS:V";
-static const char usestr[] = "[-cefhnwV][-S std][-s rep][-q rep] [file ...]";
+static const char optstr[] = "cefhknq:s:wS:V";
+static const char usestr[] = "[-cefhknwV][-S std][-s rep][-q rep] [file ...]";
 static const char hlpstr[] =
     "  -c      Print comments and not the code\n"
     "  -e      Print empty comment /* */ or //\n"
     "  -f      Print flags in effect (debugging mainly)\n"
     "  -h      Print this help and exit\n"
     "  -n      Keep newlines in comments\n"
+    "  -k      Keep number of characters in comments (implies -n)\n"
     "  -s rep  Replace the body of string literals with rep (a single character)\n"
     "  -q rep  Replace the body of character literals with rep (a single character)\n"
     "  -w      Warn about nested C-style comments\n"
@@ -196,7 +198,7 @@ static int peek(FILE *fp)
 /* Put source code character */
 static void s_putch(char c)
 {
-    if (!cflag || ((nflag || l_comment) && c == '\n'))
+    if (!cflag || ((nflag || kflag || l_comment) && c == '\n'))
         putchar(c);
     if (c == '\n')
         l_comment = false;
@@ -205,7 +207,9 @@ static void s_putch(char c)
 /* Put comment (non-code) character */
 static void c_putch(char c)
 {
-    if (cflag || (nflag && c == '\n'))
+    if (kflag && c != '\n')
+        putchar(' ');
+    else if (cflag || ((nflag || kflag) && c == '\n'))
         putchar(c);
 }
 
@@ -344,7 +348,8 @@ static Comment c_comment(int c, FILE *fp, const char *fn)
             c_putch('*');
             write_bsnl(bsnl, c_putch);
             c_putch('/');
-            s_putch(' ');
+            if (!kflag)
+                s_putch(' ');
             if (eflag)
             {
                 s_putch('*');
@@ -376,7 +381,7 @@ static Comment cpp_comment(int c, int oc)
     {
         status = NonComment;
         s_putch(c);
-        if (!nflag)
+        if (!nflag && !kflag)
             c_putch(c);
     }
     else
@@ -1172,6 +1177,9 @@ int main(int argc, char **argv)
             break;
         case 'h':
             err_help(usestr, hlpstr);
+            break;
+        case 'k':
+            kflag = true;
             break;
         case 'n':
             nflag = true;

@@ -122,6 +122,7 @@ enum { NUM_DQ_RAW_PREFIX = sizeof(dq_raw_prefix) / sizeof(dq_raw_prefix[0]) };
 
 static int std_code = C11;  /* Selected standard */
 
+static bool bflag = false;   /* Do not emit messages about minor 'bogus' errors */
 static bool cflag = false;   /* Print comments and not code */
 static bool eflag = false;   /* Print empty comment instead of blank */
 static bool nflag = false;   /* Keep newlines in comments */
@@ -145,8 +146,8 @@ static int l_nest = 0;  /* Last line with a nested comment warning */
 static int l_cend = 0;  /* Last line with a comment end warning */
 static bool l_comment = false;  /* Line contained a comment - print newline in -c mode */
 
-static const char optstr[] = "cefhknq:s:wS:V";
-static const char usestr[] = "[-cefhknwV][-S std][-s rep][-q rep] [file ...]";
+static const char optstr[] = "bcefhknq:s:wS:V";
+static const char usestr[] = "[-bcefhknwV][-S std][-s rep][-q rep] [file ...]";
 static const char hlpstr[] =
     "  -c      Print comments and not the code\n"
     "  -e      Print empty comment /* */ or //\n"
@@ -223,12 +224,14 @@ static void s_putstr(const char *str)
 
 static void warning(const char *str, const char *file, int line)
 {
-    err_report(ERR_REM, ERR_STAT, "%s:%d: %s\n", file, line, str);
+    if (!bflag)
+        err_report(ERR_REM, ERR_STAT, "%s:%d: %s\n", file, line, str);
 }
 
 static void warning2(const char *s1, const char *s2, const char *file, int line)
 {
-    err_report(ERR_REM, ERR_STAT, "%s:%d: %s %s\n", file, line, s1, s2);
+    if (!bflag)
+        err_report(ERR_REM, ERR_STAT, "%s:%d: %s %s\n", file, line, s1, s2);
 }
 
 static void warningv(const char *fmt, const char *file, int line, ...)
@@ -653,7 +656,7 @@ static void parse_number(int c, FILE *fp, const char *fn)
     else if (isdigit(pc))
     {
         /* Malformed number of some sort (09, for example) */
-        err_remark("0%c read - bogus number!\n", pc);
+        if (!bflag) err_remark("0%c read - bogus number!\n", pc);
         s_putch(c);
     }
     else
@@ -1166,6 +1169,9 @@ int main(int argc, char **argv)
     {
         switch (opt)
         {
+        case 'b':
+            bflag = true;
+            break;
         case 'c':
             cflag = true;
             break;

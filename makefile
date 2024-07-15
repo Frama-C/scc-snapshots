@@ -1,4 +1,4 @@
-# @(#)$Id: makefile,v 1.9 2017/10/26 21:47:08 jleffler Exp $
+# @(#)$Id: makefile,v 1.14 2022/05/30 21:13:00 jonathanleffler Exp $
 #
 # Release Makefile for SCC (Strip C/C++ Comments)
 #
@@ -15,34 +15,46 @@ IFLAGS  = # -I directory options
 DFLAGS  = # -D define options
 CFLAGS  = ${OFLAGS} ${UFLAGS} ${WFLAGS} ${IFLAGS} ${DFLAGS}
 
-BASH = bash
+BASH    = bash
+LN      = ln
 
-.PHONEY: all test dev-test clean realclean depend
+TEST_FLAGS = # Nothing by default; -g to generate new results, etc.
 
 TEST_TOOLS = \
 	rcskwcmp \
 	rcskwreduce \
 
 TEST_SCRIPTS = \
-	scc.test-01.sh \
-	scc.test-02.sh \
 	scc.test-03.sh \
 	scc.test-04.sh \
 	scc.test-05.sh \
 	scc.test-06.sh \
 	scc.test-07.sh \
 	scc.test-08.sh \
+	scc.test-09.sh \
+	scc.test-10.sh \
 
-all: ${PROGRAM} ${TEST_TOOLS}
+LICENCE = COPYING
+GPL_3_0 = gpl-3.0.txt
 
-${PROGRAM}: ${OBJECT}
+VERSION_HDR = ${PROGRAM}-version.h
+
+all: ${LICENCE} ${PROGRAM} ${TEST_TOOLS}
+
+# The make on AIX 7.2 interprets this as the default target if it appears before all
+.PHONEY: all test dev-test clean realclean depend
+
+${LICENCE}: ${GPL_3_0}
+	${LN} $< $@
+
+${PROGRAM}: ${OBJECT} ${VERSION_HDR}
 	${CC} -o $@ ${CFLAGS} ${OBJECT} ${LDFLAGS} ${LDLIBES}
 
-test:	${PROGRAM} dev-test ${TEST_TOOLS}
+test:	${PROGRAM} ${TEST_TOOLS} dev-test
 
 dev-test: ${TEST_SCRIPTS}
 	for test in ${TEST_SCRIPTS}; \
-	do echo $$test; ${BASH} $$test; \
+	do echo $$test; ${BASH} $$test ${TEST_FLAGS}; \
 	done
 
 clean:
